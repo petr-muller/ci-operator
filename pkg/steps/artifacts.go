@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 
 	templateapi "github.com/openshift/api/template/v1"
+	vmclient "github.com/openshift/ci-vm-operator/pkg/client/clientset/versioned/typed/virtualmachines/v1alpha1"
 )
 
 // ContainerNotifier receives updates about the status of a poll action on a pod. The caller
@@ -48,10 +49,29 @@ func (nopNotifier) Complete(_ string)               {}
 func (nopNotifier) Done(_ string) bool              { return true }
 func (nopNotifier) Cancel()                         {}
 
+type vmClient struct {
+	vmclient.VirtualMachinesGetter
+	config *rest.Config
+	client rest.Interface
+}
+
+type VMClient interface {
+	vmclient.VirtualMachinesGetter
+	RESTConfig() *rest.Config
+	RESTClient() rest.Interface
+}
+
+func (c *vmClient) RESTConfig() *rest.Config   { return c.config }
+func (c *vmClient) RESTClient() rest.Interface { return c.client }
+
 type podClient struct {
 	coreclientset.PodsGetter
 	config *rest.Config
 	client rest.Interface
+}
+
+func NewVMClient(vmc vmclient.VirtualMachinesGetter, config *rest.Config, client rest.Interface) VMClient {
+	return &vmClient{VirtualMachinesGetter: vmc, config: config, client: client}
 }
 
 func NewPodClient(podsClient coreclientset.PodsGetter, config *rest.Config, client rest.Interface) PodClient {

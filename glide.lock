@@ -1,5 +1,5 @@
-hash: e1d1761ab7549baac7e4526e66218c020dfd495db25b9a66cab21890d7de260c
-updated: 2018-10-18T15:03:01.853360742+02:00
+hash: 4e4b13fee74db27f7aa30b2814b247b0222e9dbf29e463f66e78f88357e698e8
+updated: 2018-10-18T16:28:36.410655276+02:00
 imports:
 - name: github.com/davecgh/go-spew
   version: 782f4967f2dc4564575ca782fe2d04090b5faca8
@@ -90,6 +90,8 @@ imports:
   subpackages:
   - pkg/apis/virtualmachines
   - pkg/apis/virtualmachines/v1alpha1
+  - pkg/client/clientset/versioned/scheme
+  - pkg/client/clientset/versioned/typed/virtualmachines/v1alpha1
 - name: github.com/openshift/client-go
   version: 431ec9a26e5021f35fa41ee9a89842db9bfdb370
   subpackages:

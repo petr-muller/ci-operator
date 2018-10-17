@@ -289,6 +289,7 @@ type TestStepConfiguration struct {
 	OpenshiftAnsibleCustomClusterTestConfiguration  *OpenshiftAnsibleCustomClusterTestConfiguration  `json:"openshift_ansible_custom,omitempty"`
 	OpenshiftAnsibleUpgradeClusterTestConfiguration *OpenshiftAnsibleUpgradeClusterTestConfiguration `json:"openshift_ansible_upgrade,omitempty"`
 	OpenshiftInstallerClusterTestConfiguration      *OpenshiftInstallerClusterTestConfiguration      `json:"openshift_installer,omitempty"`
+	VirtualMachineTestConfiguration                 *VirtualMachineTestConfiguration                 `json:"virtual-machine,omitempty"`
 }
 
 // ContainerTestConfiguration describes a test that runs a
@@ -297,6 +298,11 @@ type ContainerTestConfiguration struct {
 	// From is the image stream tag in the pipeline to run this
 	// command in.
 	From PipelineImageStreamTagReference `json:"from"`
+}
+
+// VirtualMachineTestConfiguration describes a test that run a command
+// in a provisioned VM
+type VirtualMachineTestConfiguration struct {
 }
 
 // ClusterProfile is the name of a set of input variables

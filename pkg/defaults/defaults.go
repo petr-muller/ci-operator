@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	templateapi "github.com/openshift/api/template/v1"
+	vmclientset "github.com/openshift/ci-vm-operator/pkg/client/clientset/versioned/typed/virtualmachines/v1alpha1"
 	buildclientset "github.com/openshift/client-go/build/clientset/versioned/typed/build/v1"
 	imageclientset "github.com/openshift/client-go/image/clientset/versioned/typed/image/v1"
 	routeclientset "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
@@ -53,6 +54,7 @@ func FromConfig(
 	var configMapGetter coreclientset.ConfigMapsGetter
 	var serviceGetter coreclientset.ServicesGetter
 	var podClient steps.PodClient
+	var vmClient steps.VMClient
 
 	if clusterConfig != nil {
 		buildGetter, err := buildclientset.NewForConfig(clusterConfig)
@@ -92,6 +94,12 @@ func FromConfig(
 		configMapGetter = coreGetter
 
 		podClient = steps.NewPodClient(coreGetter, clusterConfig, coreGetter.RESTClient())
+
+		vmGetter, err := vmclientset.NewForConfig(clusterConfig)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get VM client for cluster config: %v", err)
+		}
+		vmClient = steps.NewVMClient(vmGetter, clusterConfig, coreGetter.RESTClient())
 	}
 
 	params := steps.NewDeferredParameters()
@@ -144,7 +152,12 @@ func FromConfig(
 			releaseStep = release.AssembleReleaseStep(*rawStep.ReleaseImagesTagStepConfiguration, podClient, imageClient, artifactDir, jobSpec)
 
 		} else if rawStep.TestStepConfiguration != nil {
-			step = steps.TestStep(*rawStep.TestStepConfiguration, config.Resources, podClient, artifactDir, jobSpec)
+			if rawStep.TestStepConfiguration.ContainerTestConfiguration != nil {
+				step = steps.TestStep(*rawStep.TestStepConfiguration, config.Resources, podClient, artifactDir, jobSpec)
+			} else if rawStep.TestStepConfiguration.VirtualMachineTestConfiguration != nil {
+				step = steps.VMTestStep(*rawStep.TestStepConfiguration, vmClient, jobSpec)
+			}
+			// else we just ignore the remaining types, they are there just for Prowgen
 		}
 
 		step, ok := checkForFullyQualifiedStep(step, params)
@@ -405,7 +418,7 @@ func stepConfigsForBuild(config *api.ReleaseBuildConfiguration, jobSpec *api.Job
 
 	for i := range config.Tests {
 		test := &config.Tests[i]
-		if test.ContainerTestConfiguration != nil {
+		if test.ContainerTestConfiguration != nil || test.VirtualMachineTestConfiguration != nil {
 			buildSteps = append(buildSteps, api.StepConfiguration{TestStepConfiguration: test})
 		}
 	}

@@ -13,6 +13,8 @@ import (
 
 	imageclientset "github.com/openshift/client-go/image/clientset/versioned/typed/image/v1"
 
+	vmapi "github.com/openshift/ci-vm-operator/pkg/apis/virtualmachines/v1alpha1"
+
 	"github.com/openshift/ci-operator/pkg/api"
 )
 
@@ -22,6 +24,17 @@ type PodStepConfiguration struct {
 	Commands           string
 	ArtifactDir        string
 	ServiceAccountName string
+}
+
+type VMStepConfiguration struct {
+	As string
+}
+
+type vmStep struct {
+	name     string
+	config   VMStepConfiguration
+	vmClient VMClient
+	jobSpec  *api.JobSpec
 }
 
 type podStep struct {
@@ -35,6 +48,10 @@ type podStep struct {
 }
 
 func (s *podStep) Inputs(ctx context.Context, dry bool) (api.InputDefinition, error) {
+	return nil, nil
+}
+
+func (s *vmStep) Inputs(ctx context.Context, dry bool) (api.InputDefinition, error) {
 	return nil, nil
 }
 
@@ -124,6 +141,34 @@ func (s *podStep) Run(ctx context.Context, dry bool) error {
 	return nil
 }
 
+func (s *vmStep) Run(ctx context.Context, dry bool) error {
+	log.Printf("Executing %s %s", s.name, s.config.As)
+
+	machineSpec := &vmapi.VirtualMachine{
+		ObjectMeta: meta.ObjectMeta{
+			Name: s.config.As,
+		},
+		Spec: vmapi.VirtualMachineSpec{
+			MachineType: vmapi.VirtualMachineTypeStandard1,
+			BootDisk: vmapi.VirtualMachineBootDiskSpec{
+				ImageFamily: "compute/v1/projects/centos-cloud/global/images/family/centos-6",
+				VirtualMachineDiskSpec: vmapi.VirtualMachineDiskSpec{
+					SizeGB: 25,
+					Type:   vmapi.VirtualMachineDiskTypePersistentStandard,
+				},
+			},
+		},
+	}
+
+	fmt.Printf("Created a VM instance: %v", machineSpec)
+
+	if _, err := s.vmClient.VirtualMachines(s.jobSpec.Namespace).Create(machineSpec); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *podStep) gatherArtifacts() bool {
 	return len(s.config.ArtifactDir) > 0 && len(s.artifactDir) > 0
 }
@@ -139,6 +184,10 @@ func (s *podStep) Done() (bool, error) {
 	return true, nil
 }
 
+func (s *vmStep) Done() (bool, error) {
+	return false, nil
+}
+
 func (s *podStep) Requires() []api.StepLink {
 	if s.config.From.Name == api.PipelineImageStream {
 		return []api.StepLink{api.InternalImageLink(api.PipelineImageStreamTagReference(s.config.From.Tag))}
@@ -146,7 +195,16 @@ func (s *podStep) Requires() []api.StepLink {
 	return []api.StepLink{api.ImagesReadyLink()}
 }
 
+func (s *vmStep) Requires() []api.StepLink {
+	return []api.StepLink{api.ImagesReadyLink()}
+
+}
+
 func (s *podStep) Creates() []api.StepLink {
+	return []api.StepLink{}
+}
+
+func (s *vmStep) Creates() []api.StepLink {
 	return []api.StepLink{}
 }
 
@@ -154,26 +212,68 @@ func (s *podStep) Provides() (api.ParameterMap, api.StepLink) {
 	return nil, nil
 }
 
+func (s *vmStep) Provides() (api.ParameterMap, api.StepLink) {
+	return nil, nil
+}
+
 func (s *podStep) Name() string { return s.config.As }
+
+func (s *vmStep) Name() string {
+	fmt.Printf("Got here: '%v'\n", s.config)
+	return s.config.As
+}
 
 func (s *podStep) Description() string {
 	return fmt.Sprintf("Run the tests for %s in a pod and wait for success or failure", s.config.As)
 }
 
+func (s *vmStep) Description() string {
+	return fmt.Sprintf("Run a VM-based test '%s' and wait for success or failure", s.name)
+}
+
+func VMTestStep(config api.TestStepConfiguration, vmClient VMClient, jobSpec *api.JobSpec) api.Step {
+	if config.VirtualMachineTestConfiguration != nil {
+		fmt.Printf("Got also here: %v\n", config.As)
+
+		return VMStep(
+			"VM test",
+			VMStepConfiguration{
+				As: config.As,
+			},
+			vmClient,
+			jobSpec,
+		)
+	}
+
+	panic(fmt.Sprintf("Unknown TestStep type: %v", config))
+}
+
 func TestStep(config api.TestStepConfiguration, resources api.ResourceConfiguration, podClient PodClient, artifactDir string, jobSpec *api.JobSpec) api.Step {
-	return PodStep(
-		"test",
-		PodStepConfiguration{
-			As:          config.As,
-			From:        api.ImageStreamTagReference{Name: api.PipelineImageStream, Tag: string(config.ContainerTestConfiguration.From)},
-			Commands:    config.Commands,
-			ArtifactDir: config.ArtifactDir,
-		},
-		resources,
-		podClient,
-		artifactDir,
-		jobSpec,
-	)
+	if config.ContainerTestConfiguration != nil {
+		return PodStep(
+			"test",
+			PodStepConfiguration{
+				As:          config.As,
+				From:        api.ImageStreamTagReference{Name: api.PipelineImageStream, Tag: string(config.ContainerTestConfiguration.From)},
+				Commands:    config.Commands,
+				ArtifactDir: config.ArtifactDir,
+			},
+			resources,
+			podClient,
+			artifactDir,
+			jobSpec,
+		)
+	}
+	panic(fmt.Sprintf("Unknown TestStep type: %v", config))
+}
+
+func VMStep(name string, config VMStepConfiguration, vmClient VMClient, jobSpec *api.JobSpec) api.Step {
+	return &vmStep{
+		name:     name,
+		config:   config,
+		vmClient: vmClient,
+		jobSpec:  jobSpec,
+	}
 }
 
 func PodStep(name string, config PodStepConfiguration, resources api.ResourceConfiguration, podClient PodClient, artifactDir string, jobSpec *api.JobSpec) api.Step {

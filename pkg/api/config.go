@@ -212,6 +212,9 @@ func validateTestConfigurationType(fieldRoot string, test TestStepConfiguration,
 		typeCount++
 		validationErrors = append(validationErrors, validateClusterProfile(fmt.Sprintf("%s", fieldRoot), testConfig.ClusterProfile))
 	}
+	if testConfig := test.VirtualMachineTestConfiguration; testConfig != nil {
+		typeCount++
+	}
 	if typeCount == 0 {
 		validationErrors = append(validationErrors, fmt.Errorf("%s has no type", fieldRoot))
 	} else if typeCount == 1 {

@@ -1,0 +1,20 @@
+build_root:
+  image_stream_tag:
+    cluster: https://api.ci.openshift.org
+    name: release
+    namespace: openshift
+    tag: golang-1.10
+resources:
+  "*":
+    limits:
+      cpu: '2'
+      memory: '6Gi'
+    requests:
+      cpu: 100m
+      memory: 200Mi
+tests:
+- as: vm-test
+  commands: /bin/true
+  virtual-machine:
+    using:
+    - src

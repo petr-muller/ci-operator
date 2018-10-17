@@ -13,5 +13,4 @@ import:
 - package: github.com/ghodss/yaml
   version: master
 - package: github.com/openshift/ci-vm-operator
-  subpackages:
-  - pkg/apis/virtualmachines
+  version: master

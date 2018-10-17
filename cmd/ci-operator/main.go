@@ -480,6 +480,8 @@ func loadClusterConfig() (*rest.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not load client configuration: %v", err)
 	}
+
+	clusterConfig.Impersonate = rest.ImpersonationConfig{UserName: "system:admin"}
 	return clusterConfig, nil
 }
 
