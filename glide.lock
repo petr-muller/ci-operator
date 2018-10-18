@@ -1,6 +1,10 @@
-hash: 807902f7a8816796427eae112c9ccebfefebe69d76e075fd8b68298363ca0ad6
-updated: 2018-05-16T23:26:41.003170956-04:00
+hash: e1d1761ab7549baac7e4526e66218c020dfd495db25b9a66cab21890d7de260c
+updated: 2018-10-18T15:03:01.853360742+02:00
 imports:
+- name: github.com/davecgh/go-spew
+  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
+  subpackages:
+  - spew
 - name: github.com/docker/spdystream
   version: 449fdfce4d962303d702fec724ef0ad181c92528
   subpackages:
@@ -10,7 +14,7 @@ imports:
   subpackages:
   - log
 - name: github.com/ghodss/yaml
-  version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
+  version: c7ce16629ff4cd059ed96ed06419dd3856fd3577
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -26,6 +30,10 @@ imports:
   - sortkeys
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
+- name: github.com/golang/groupcache
+  version: 02826c3e79038b59d737d3b1c0a1d937f71a4433
+  subpackages:
+  - lru
 - name: github.com/golang/protobuf
   version: 1643683e1b54a9e88ad26d98f81400c8c9d9f4f9
   subpackages:
@@ -53,7 +61,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/json-iterator/go
-  version: 36b14963da70d11297d313183d7e6388c8510e1e
+  version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/juju/ratelimit
   version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
 - name: github.com/mailru/easyjson
@@ -62,10 +70,13 @@ imports:
   - buffer
   - jlexer
   - jwriter
+- name: github.com/modern-go/concurrent
+  version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
+- name: github.com/modern-go/reflect2
+  version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
 - name: github.com/openshift/api
-  version: 54917e0ae540d86047a321158f860f2143c1c81d
+  version: a46029836bdc207f9949fc5f4907f0bfd3cf7763
   subpackages:
-  - apps/v1
   - build/v1
   - image/docker10
   - image/dockerpre012
@@ -74,11 +85,14 @@ imports:
   - project/v1
   - route/v1
   - template/v1
-- name: github.com/openshift/client-go
-  version: c6778f7b6f84c0d3a26cb3bae1d8fd6282bb8025
+- name: github.com/openshift/ci-vm-operator
+  version: 570d71064e3d543f8ce9225c8abbb8617028cbee
   subpackages:
-  - apps/clientset/versioned/scheme
-  - apps/clientset/versioned/typed/apps/v1
+  - pkg/apis/virtualmachines
+  - pkg/apis/virtualmachines/v1alpha1
+- name: github.com/openshift/client-go
+  version: 431ec9a26e5021f35fa41ee9a89842db9bfdb370
+  subpackages:
   - build/clientset/versioned/scheme
   - build/clientset/versioned/typed/build/v1
   - image/clientset/versioned/scheme
@@ -131,7 +145,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
-  version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 - name: k8s.io/api
   version: 9273ee02527c608cecc74969b3e489f5dba686da
   subpackages:
@@ -164,7 +178,7 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 21efb2924c7cf1920f76af05b1fd6a325bf46dfc
+  version: 1926e7bb5c13e9c651830fe950cb623071bb03d2
   subpackages:
   - pkg/api/errors
   - pkg/api/meta
@@ -193,16 +207,19 @@ imports:
   - pkg/util/httpstream/spdy
   - pkg/util/intstr
   - pkg/util/json
+  - pkg/util/mergepatch
   - pkg/util/net
   - pkg/util/remotecommand
   - pkg/util/runtime
   - pkg/util/sets
+  - pkg/util/strategicpatch
   - pkg/util/validation
   - pkg/util/validation/field
   - pkg/util/wait
   - pkg/util/yaml
   - pkg/version
   - pkg/watch
+  - third_party/forked/golang/json
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
@@ -210,6 +227,7 @@ imports:
   subpackages:
   - discovery
   - kubernetes/scheme
+  - kubernetes/typed/apps/v1
   - kubernetes/typed/core/v1
   - kubernetes/typed/rbac/v1
   - pkg/version
@@ -221,6 +239,7 @@ imports:
   - tools/clientcmd/api/latest
   - tools/clientcmd/api/v1
   - tools/metrics
+  - tools/record
   - tools/reference
   - tools/remotecommand
   - transport
@@ -230,8 +249,10 @@ imports:
   - util/flowcontrol
   - util/homedir
   - util/integer
+  - util/retry
 - name: k8s.io/kube-openapi
   version: 7ee50c0aa8059d610950c952a9ed7a5e33ab336a
   subpackages:
   - pkg/common
+  - pkg/util/proto
 testImports: []

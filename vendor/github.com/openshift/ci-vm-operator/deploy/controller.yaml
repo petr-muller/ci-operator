@@ -1,0 +1,71 @@
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: virtual-machine-operator
+  name: virtual-machine-operator
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    app: virtual-machine-operator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: virtual-machine-operator
+    spec:
+      serviceAccount: virtual-machine-operator
+      containers:
+      - name: virtual-machine-operator
+        image: virtual-machine-operator:latest
+        imagePullPolicy: Always
+        command:
+        - /ci-vm-operator
+        args:
+        - --config-file=/operator.local.config/config.yaml
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /operator.local.credentials/gce.json
+        volumeMounts:
+        - mountPath: /operator.local.config/
+          name: configuration
+          readOnly: true
+        - mountPath: /operator.local.credentials/
+          name: credentials
+          readOnly: true
+      volumes:
+      - name: configuration
+        configMap:
+          defaultMode: 420
+          name: virtual-machine-operator-configuration
+      - name: credentials
+        secret:
+          defaultMode: 420
+          secretName: virtual-machine-operator-credentials
+  triggers:
+  - type: ConfigChange
+  - type: ImageChange
+    imageChangeParams:
+      automatic: true
+      containerNames:
+      - virtual-machine-operator
+      from:
+        kind: ImageStreamTag
+        name: virtual-machine-operator:latest
+        namespace: ci
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: virtual-machine-operator-configuration
+data:
+  config.yaml: |
+    project: openshift-gce-devel-ci
+    zone: us-east1-b
+    sshConnectionConfig:
+      retries: 20
+      delaySeconds: 10
+      timeoutSeconds: 10

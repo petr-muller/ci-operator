@@ -12,3 +12,6 @@ import:
   version: kubernetes-1.9.1
 - package: github.com/ghodss/yaml
   version: master
+- package: github.com/openshift/ci-vm-operator
+  subpackages:
+  - pkg/apis/virtualmachines
