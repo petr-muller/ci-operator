@@ -75,7 +75,7 @@ func TestValidateTests(t *testing.T) {
 			id: "test without `commands`",
 			tests: []TestStepConfiguration{
 				{
-					As: "test",
+					As:                         "test",
 					ContainerTestConfiguration: &ContainerTestConfiguration{From: "ignored"},
 				},
 			},
@@ -110,7 +110,7 @@ func TestValidateTests(t *testing.T) {
 			id: "invalid cluster profile",
 			tests: []TestStepConfiguration{
 				{
-					As: "test",
+					As:                                       "test",
 					OpenshiftAnsibleClusterTestConfiguration: &OpenshiftAnsibleClusterTestConfiguration{},
 				},
 			},
