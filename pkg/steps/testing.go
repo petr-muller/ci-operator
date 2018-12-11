@@ -126,6 +126,32 @@ func someStepLink(as string) api.StepLink {
 	})
 }
 
+func fakeSuccessfulBuild(build *apibuildv1.Build, buildclient buildv1.BuildV1Interface, istclient imagev1.ImageV1Interface, t *testing.T) {
+	if build.Spec.Output.To.Kind == "ImageStreamTag" {
+		name := build.Spec.Output.To.Name
+		namespace := build.Spec.Output.To.Namespace
+		t.Logf("Fake cluster: Build output is ImageStreamTag '%s' in namespace '%s': creating a fake ImageStreamTag with a fake Image", name, namespace)
+		istag := &apiimagev1.ImageStreamTag{
+			ObjectMeta: meta.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Image: apiimagev1.Image{ObjectMeta: meta.ObjectMeta{Name: "DoesThisMatter"}},
+		}
+		if _, err := istclient.ImageStreamTags(namespace).Create(istag); err != nil {
+			t.Errorf("Fake cluster: Failed to treate ImageStreamTag to fake Build output: %v", err)
+			return
+		}
+	}
+
+	// make a copy to avoid a race
+	newBuild := build.DeepCopy()
+	newBuild.Status.Phase = apibuildv1.BuildPhaseComplete
+	if _, err := buildclient.Builds("jobspecNamespace").UpdateStatus(newBuild); err != nil {
+		t.Errorf("Fake cluster: UpdateStatus() returned an error: %v", err)
+	}
+}
+
 func errorCheck(t *testing.T, message string, expected bool, err error) {
 	if expected && err == nil {
 		t.Errorf("%s: expected to return error, returned nil", message)
