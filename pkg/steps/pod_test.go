@@ -7,7 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/diff"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/openshift/ci-operator/pkg/api"
 )
@@ -41,11 +40,7 @@ func preparePodStep(t *testing.T, namespace string) (*podStep, stepExpectation, 
 		Namespace: namespace,
 	}
 
-	fakecs := ciopTestingClient{
-		kubecs:  fake.NewSimpleClientset(),
-		imagecs: nil,
-		t:       t,
-	}
+	fakecs := createTestingClient(t)
 	client := NewPodClient(fakecs.Core(), nil, nil)
 
 	ps := PodStep(stepName, config, resources, client, artifactDir, jobSpec)

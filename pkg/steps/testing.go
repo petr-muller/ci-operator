@@ -7,18 +7,36 @@ import (
 	"reflect"
 	"testing"
 
-	fakeimageclientset "github.com/openshift/client-go/image/clientset/versioned/fake"
-	imagev1 "github.com/openshift/client-go/image/clientset/versioned/typed/image/v1"
-	fakeimagev1 "github.com/openshift/client-go/image/clientset/versioned/typed/image/v1/fake"
+	apibuildv1 "github.com/openshift/api/build/v1"
+	buildv1 "github.com/openshift/client-go/build/clientset/versioned/typed/build/v1"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/diff"
-	"k8s.io/client-go/kubernetes/fake"
+	apiimagev1 "github.com/openshift/api/image/v1"
+	imagev1 "github.com/openshift/client-go/image/clientset/versioned/typed/image/v1"
+
+	fakebuildclientset "github.com/openshift/client-go/build/clientset/versioned/fake"
+	fakeimageclientset "github.com/openshift/client-go/image/clientset/versioned/fake"
+	fakerouteclientset "github.com/openshift/client-go/route/clientset/versioned/fake"
+
+	apicorev1 "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 
+	"k8s.io/apimachinery/pkg/util/diff"
+	"k8s.io/client-go/kubernetes/fake"
+
 	"github.com/openshift/ci-operator/pkg/api"
 )
+
+func createTestingClient(t *testing.T) *ciopTestingClient {
+	return &ciopTestingClient{
+		kubecs:  fake.NewSimpleClientset(),
+		imagecs: fakeimageclientset.NewSimpleClientset(),
+		routecs: fakerouteclientset.NewSimpleClientset(),
+		buildcs: fakebuildclientset.NewSimpleClientset(),
+		t:       t,
+	}
+}
 
 // Fake Clientset, created so we can override its `Core()` method
 // and return our fake CoreV1 API (=ciopTestingCore)
@@ -26,16 +44,14 @@ import (
 type ciopTestingClient struct {
 	kubecs  *fake.Clientset
 	imagecs *fakeimageclientset.Clientset
+	routecs *fakerouteclientset.Clientset
+	buildcs *fakebuildclientset.Clientset
 	t       *testing.T
 }
 
 func (c *ciopTestingClient) Core() corev1.CoreV1Interface {
 	fc := c.kubecs.Core().(*fakecorev1.FakeCoreV1)
 	return &ciopTestingCore{*fc, c.t}
-}
-
-func (c *ciopTestingClient) ImageV1() imagev1.ImageV1Interface {
-	return c.imagecs.ImageV1().(*fakeimagev1.FakeImageV1)
 }
 
 // Fake CoreV1, created so we can override its `Pods()` method
@@ -62,11 +78,11 @@ type ciopTestingPods struct {
 // they would be created without any sensible Phase, which causes problems in
 // the ci-operator code. Therefore, our fake Create() always creates Pods with
 // a `Pending` phase if it does not carry phase already.
-func (c *ciopTestingPods) Create(pod *v1.Pod) (*v1.Pod, error) {
+func (c *ciopTestingPods) Create(pod *apicorev1.Pod) (*apicorev1.Pod, error) {
 	c.t.Logf("FakePods.Create(): ObjectMeta.Name=%s Status.Phase=%s", pod.ObjectMeta.Name, pod.Status.Phase)
 	if pod.Status.Phase == "" {
-		pod.Status.Phase = v1.PodPending
-		c.t.Logf("FakePods.Create(): Setting Status.Phase to '%s'", v1.PodPending)
+		pod.Status.Phase = apicorev1.PodPending
+		c.t.Logf("FakePods.Create(): Setting Status.Phase to '%s'", apicorev1.PodPending)
 	}
 	return c.FakePods.Create(pod)
 }

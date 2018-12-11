@@ -5,9 +5,8 @@ import (
 	"testing"
 
 	apiimagev1 "github.com/openshift/api/image/v1"
-	fakeimageclientset "github.com/openshift/client-go/image/clientset/versioned/fake"
 
-	corev1 "k8s.io/api/core/v1"
+	apicorev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -36,22 +35,16 @@ func TestInputImageTagStep(t *testing.T) {
 		Image: apiimagev1.Image{ObjectMeta: meta.ObjectMeta{Name: "ddc0de"}},
 	}
 
-	fakecs := ciopTestingClient{
-		kubecs:  nil,
-		imagecs: fakeimageclientset.NewSimpleClientset(),
-		t:       t,
-	}
+	fakecs := createTestingClient(t)
+	client := fakecs.imagecs.ImageV1()
 
-	srcClient := fakecs.ImageV1()
-	dstClient := srcClient
-
-	if _, err := srcClient.ImageStreamTags(baseImage.Namespace).Create(istag); err != nil {
+	if _, err := client.ImageStreamTags(baseImage.Namespace).Create(istag); err != nil {
 		t.Errorf("Could not set up testing ImageStreamTag: %v", err)
 	}
 
 	// Make a step instance
 	jobspec := &api.JobSpec{Namespace: "target-namespace"}
-	iits := InputImageTagStep(config, srcClient, dstClient, jobspec)
+	iits := InputImageTagStep(config, client, client, jobspec)
 
 	// Set up expectations for the step methods
 	specification := stepExpectation{
@@ -92,7 +85,7 @@ func TestInputImageTagStep(t *testing.T) {
 			Namespace: jobspec.Namespace,
 		},
 		Tag: &apiimagev1.TagReference{
-			From: &corev1.ObjectReference{
+			From: &apicorev1.ObjectReference{
 				Kind:      "ImageStreamImage",
 				Namespace: baseImage.Namespace,
 				Name:      "BASE@ddc0de",
@@ -103,7 +96,7 @@ func TestInputImageTagStep(t *testing.T) {
 		},
 	}
 
-	targetImageStreamTag, err := dstClient.ImageStreamTags(jobspec.Namespace).Get("pipeline:TO", meta.GetOptions{})
+	targetImageStreamTag, err := client.ImageStreamTags(jobspec.Namespace).Get("pipeline:TO", meta.GetOptions{})
 	if !equality.Semantic.DeepEqual(expectedImageStreamTag, targetImageStreamTag) {
 		t.Errorf("Different ImageStreamTag 'pipeline:TO' after step execution:\n%s", diff.ObjectReflectDiff(expectedImageStreamTag, targetImageStreamTag))
 	}

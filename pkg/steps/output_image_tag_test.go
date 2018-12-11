@@ -4,9 +4,8 @@ import (
 	"testing"
 
 	imagev1 "github.com/openshift/api/image/v1"
-	fakeimageclientset "github.com/openshift/client-go/image/clientset/versioned/fake"
 
-	corev1 "k8s.io/api/core/v1"
+	apicorev1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -26,11 +25,7 @@ func TestOutputImageStep(t *testing.T) {
 		},
 	}
 
-	fakecs := ciopTestingClient{
-		kubecs:  nil,
-		imagecs: fakeimageclientset.NewSimpleClientset(),
-		t:       t,
-	}
+	fakecs := createTestingClient(t)
 
 	client := fakecs.imagecs.ImageV1()
 
@@ -88,7 +83,7 @@ func TestOutputImageStep(t *testing.T) {
 			Namespace: "configToNamespace",
 		},
 		Tag: &imagev1.TagReference{
-			From: &corev1.ObjectReference{
+			From: &apicorev1.ObjectReference{
 				Kind:      "ImageStreamImage",
 				Namespace: "job-namespace",
 				Name:      "pipeline@fromImageName",
