@@ -80,4 +80,36 @@ content is YAML-unmarshalled into the `api.ReleaseBuildConfiguration` structure.
 
 #### Validating ci-operator config
 
+#### Reading JOB_SPEC
 
+##### Reading JOB_SPEC from environment
+First, the content of `JOB_SPEC` environment variable is read, if present. If
+successful, the content is unmarshaled into a `api.JobSpec` struct. The raw
+(string) `JOB_SPEC` is also saved. If the `api.JobSpec` was successfully
+created this way and it has nonempty `Refs`, all pulls in `Refs.Pulls` are
+iterated and all PR authors are saved into `o.authors`.
+
+##### Building JOB_SPEC from `--git-ref` when not available in JOB_SPEC
+If reading from `JOB_SPEC` was not successful, ci-operator tries to create a
+`api.JobSpec` from `--git-ref` option (so it must be passed when `JOB_SPEC`
+is not set). The parameter is "@"-split into exactly two items, then the
+first is "/"-split into exactly two items. Full GitHub repo URL is assembled
+from the items and `git ls-remote` is used to get the revision hash of the
+input ref. The output from the command is first "\n"-split, then the first
+line is "\t"-split. The first item is the hash. This is how `git ls-remote`
+output looks like:
+
+```
+$ git ls-remote https://github.com/openshift/origin master
+0a22c55577372902fbb2ad97e06e3ab2a3578027	refs/heads/master
+00b18d97d1e03cb275bce7c434c6f15e2fc36e00	refs/remotes/akram/master
+```
+
+Fully determined ref name (`refs/heads/master`) for the selected hash is then
+cross-checked against the input ref. If `--git-ref=org/repo@master` was
+passed, then ci-operator checks if the full name for selected hash matches
+`"refs/heads/" + "master"`.
+
+If all this succeeds, then an artificial `JobSpec` is constructed, matching a
+periodic job called `dev`, with a single ref with org, repo, base ref and base
+SHA set to the determined information.
