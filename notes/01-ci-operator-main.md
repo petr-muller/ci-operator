@@ -16,22 +16,24 @@
 ### Generic command options
 1. `-h/--help`: Show help
 2. `-v`: Show verbose output
-3. `--dry-run`: Usual dry-run option, avoid doing any modifications to external
-   systems
+3. `--dry-run`: Usual dry-run option, avoid doing any
+   modifications to external systems
 
 ### Inputs
-1. `--config`: ci-operator config file path. This input can also be passed as `$CONFIG_SPEC`
-2. `--template`: Paths to optional templates to add as steps. Expected to contain at least one `restart=never` pod.
-3. `--git-ref`: Use the provided repo revision for testing instead of the one
-   provided in `$JOB_SPEC`.
-4. `--give-pr-author-access-to-namespace`: If set, then RBAC will be set so
+1. `--config`: ci-operator config file path. This input can
+   also be passed as `$CONFIG_SPEC`
+2. `--template`: Paths to optional templates to add as steps.
+   Expected to contain at least one `restart=never` pod.
+3. `--secret-dir`: Path to a directory to be provided to the
+   jobs as a secret.
+4. `--git-ref`: Use the provided repo revision for testing
+   instead of the one provided in `$JOB_SPEC`.
+5. `--give-pr-author-access-to-namespace`: If set, then RBAC will be set so
    that the PR author is allowed to view the temporary namespace created by
    the ci-operator.
-5. `--as`: Same as in `oc`/`kubectl`, allows to impersonate another user.
-6. `--sentry-dsn-path`: Path to a file with a Sentry DSN secret. When set,
+6. `--as`: Same as in `oc`/`kubectl`, allows to impersonate another user.
+7. `--sentry-dsn-path`: Path to a file with a Sentry DSN secret. When set,
    reporting failures to Sentry instance is enabled.
-
-
 
 ### Namespace controls
 1. `--input-hash`: Add something as an input to the hash that determines
@@ -47,15 +49,15 @@
    different cpmponent, the NS TTL Controller.
 
 ### Outputs
-1. `--target`: Can be passed multiple times. Select a subset of graph targets
-   that will be built.
-2. `--print-graph`: Just print out the graph (for digraph utility) that would be
-   executed
+1. `--target`: Can be passed multiple times. Select a subset
+   of graph targets that will be built.
+2. `--print-graph`: Just print out the graph (for digraph
+   utility) that would be executed
 3. `--promote`: If set, after all targets PASS, promote all images built by
    the run into a separate namespace/imagestream, to be kept (otherwise they
    are deleted when the NS is deleted).
-4. `--artifact-dir`: If set, artifacts from tests and templates will be
-   fetched to this directory.
+4. `--artifact-dir`: If set, artifacts from tests and
+   templates will be fetched to this directory.
 5. `--write-params`: If set, some params will be saved to the file to the
    provided path. (**TODO:** Not sure what this does, try.)
 
@@ -79,6 +81,8 @@ variable is read. If both fails, the method returns an error. Otherwise, the
 content is YAML-unmarshalled into the `api.ReleaseBuildConfiguration` structure.
 
 #### Validating ci-operator config
+
+See [02-ReleaseBuildConfiguration.md#Validation]
 
 #### Reading JOB_SPEC
 
@@ -113,3 +117,49 @@ passed, then ci-operator checks if the full name for selected hash matches
 If all this succeeds, then an artificial `JobSpec` is constructed, matching a
 periodic job called `dev`, with a single ref with org, repo, base ref and base
 SHA set to the determined information.
+
+##### Building JOB_SPEC when both envvar and `--git-ref` are present
+
+When both the `$JOB_SPEC` environmental variable is set and `--git-ref` was
+passed, the `JobSpec` is first fully constructed from the environment, and then
+another instance is built from the `--git-ref` value. The `Refs` member in the
+envvar-based instance is then overwritten by the `Refs` from the
+`--git-ref`-based instance.
+
+##### Other fields
+
+The `JobSpec.BaseNamespace` is set to whatever was provided in
+`--base-namespace` (or its default value, which is `"stable"`)
+
+#### Printing specs in dry mode
+
+When run in dry and verbose mode, both ci-operator config and job specification
+are printed out.
+
+#### Printing discovered refs
+
+Both straight and extra refs from the job specification are first merged
+merged together into a single slice. At least one ref must be present, otherwise
+the run ends with an error. Each ref is summarized for output. When no PRs are
+present in the ref, it is summarized like this:
+
+`Resolved source https://github.com/$ORG/$REPO to $BRANCH@$SHA`
+
+If there are PRs in the request, they are added as a suffix:
+
+`Resolved source https://github.com/$ORG/$REPO to $BRANCH@$SHA merging: $PR1,$PR2`
+
+#### Processing input secrets
+
+For each directory path passed as an input secret, an `Opaque` secret instance
+is created. Its name is the basepath of the path. Each file in the directory
+that is not a broken symlink or a directory is then read and its content is
+added to the secret. The key for the item is the filename. If there is exactly
+one item in the secret, the presence of two known secret names is checked
+(`.dockercfg` and `.dockerconfigjson`) and if they are the only secret present,
+the secret type is set to `SecretTypeDockerCfg` or `SecretTypeDockerConfigJson`,
+respectively. The resulting slice of secrets is saved into the `options` struct.
+
+#### Processing input templates
+
+main.go:L355
