@@ -162,4 +162,31 @@ respectively. The resulting slice of secrets is saved into the `options` struct.
 
 #### Processing input templates
 
-main.go:L355
+Each path passed as a template path is read and unmarshaled using 
+`UniversalDeserializer`. It is an error if the deserialized object is not a
+`Template`. If the template does not have a name, its name is inferred from the
+path (base name without extension).
+
+#### Reading cluster config
+
+Cluster config is read using the `loadClusterConfig` helper. First, the
+in-cluster config is attempted to be obtained. If this fails, cluster config
+is read with the `clientcmd.NewDefaultClientConfig` method.
+
+#### Setting up impersonation
+
+If the `--as` parameter was passed, it is used for the impersonation config.
+
+### Execution
+
+Implemented in `Run` method, takes care of the whole execution. When it fails,
+we report the failure to Sentry (if not run in dry-mode) and produce a generic
+failing JUnit.
+
+First, we take the current time (when the execution started) and defer a
+function that will print out how long the run took. Then we build the graph of
+steps. Two sets of steps are build: the actual steps and post-steps. These are
+built using the `defaults.FromConfig` [method](03-Graph.md#building-the-graph).
+If building the graph fails, we error out.
+
+main.go#L401
